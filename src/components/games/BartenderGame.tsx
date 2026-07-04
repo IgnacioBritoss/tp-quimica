@@ -306,49 +306,69 @@ function Tutorial({ onBack }: { onBack: () => void }) {
   return (
     <div className="py-2 space-y-4">
       <BackButton onClick={onBack} />
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch">
         {RECIPES.map((r, idx) => {
           const embed = youtubeEmbed(r.id);
-          const liquidTotal = r.parts
-            .filter((p) => p.ingredientId !== "hielo")
-            .reduce((s, p) => s + p.parts, 0);
+          const liquids = r.parts.filter((p) => p.ingredientId !== "hielo");
+          const liquidTotal = liquids.reduce((s, p) => s + p.parts, 0);
           return (
             <motion.div
               key={r.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.03 }}
-              className="rounded-md border border-border bg-surface-2 p-4"
+              className="rounded-md border border-border bg-surface overflow-hidden flex flex-col h-full"
             >
-              <div className="font-semibold text-text mb-2">{r.name}</div>
-              <div className="flex flex-wrap gap-1.5 mb-2">
-                {r.parts.map((p) => {
-                  const ing = getIngredient(p.ingredientId)!;
-                  const isIce = p.ingredientId === "hielo";
-                  const pct = !isIce && liquidTotal > 0 ? Math.round((p.parts / liquidTotal) * 100) : null;
-                  return (
-                    <span
-                      key={p.ingredientId}
-                      className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs border border-border"
-                      style={{ backgroundColor: `${ing.color}1f` }}
-                    >
-                      <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: ing.color }} />
-                      {ing.name} · {p.parts}
-                      {pct != null && <span className="text-muted">· {pct}%</span>}
-                    </span>
-                  );
-                })}
+              <div className="p-4 flex flex-col flex-grow">
+                <h3 className="font-semibold text-text">{r.name}</h3>
+
+                {/* barra de proporcion de los liquidos */}
+                <div className="mt-3 flex h-2.5 rounded-full overflow-hidden border border-border">
+                  {liquids.map((p) => {
+                    const ing = getIngredient(p.ingredientId)!;
+                    return (
+                      <div
+                        key={p.ingredientId}
+                        style={{ width: `${(p.parts / liquidTotal) * 100}%`, backgroundColor: ing.color }}
+                        title={ing.name}
+                      />
+                    );
+                  })}
+                </div>
+
+                {/* lista formal de ingredientes */}
+                <dl className="mt-3 divide-y divide-border/70 text-sm">
+                  {r.parts.map((p) => {
+                    const ing = getIngredient(p.ingredientId)!;
+                    const isIce = p.ingredientId === "hielo";
+                    const pct = !isIce && liquidTotal > 0 ? Math.round((p.parts / liquidTotal) * 100) : null;
+                    return (
+                      <div key={p.ingredientId} className="flex items-center gap-2 py-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: ing.color }} />
+                        <dt className="text-text">{ing.name}</dt>
+                        <dd className="ml-auto text-muted tabular-nums">
+                          {p.parts} {p.parts === 1 ? "parte" : "partes"}
+                          {pct != null && <span className="text-text font-medium"> · {pct}%</span>}
+                        </dd>
+                      </div>
+                    );
+                  })}
+                </dl>
+
+                <p className="text-xs text-muted mt-3 leading-relaxed">{r.tip}</p>
               </div>
-              <p className="text-xs text-muted">{r.tip}</p>
+
               {embed && (
-                <div className="mt-3 aspect-video w-full rounded overflow-hidden border border-border">
-                  <iframe
-                    src={embed}
-                    title={r.name}
-                    className="w-full h-full"
-                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
+                <div className="px-4 pb-4 mt-auto">
+                  <div className="aspect-video w-full rounded overflow-hidden border border-border bg-black/5">
+                    <iframe
+                      src={embed}
+                      title={r.name}
+                      className="w-full h-full"
+                      allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
                 </div>
               )}
             </motion.div>
