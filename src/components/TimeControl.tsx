@@ -2,6 +2,7 @@
 
 import { formatHours, getPhase } from "@/lib/calc";
 import { SectionCard } from "@/components/SectionCard";
+import { TimePicker } from "@/components/TimePicker";
 
 interface TimeControlProps {
   lastDrinkTime: string; // "HH:MM"
@@ -30,16 +31,8 @@ export function TimeControl({ lastDrinkTime, onChange, hoursSinceLastDrink }: Ti
     >
       <div className="flex flex-wrap items-end gap-3">
         <div>
-          <label htmlFor="last-drink" className="text-sm text-muted block mb-1">
-            Hora del ultimo trago
-          </label>
-          <input
-            id="last-drink"
-            type="time"
-            value={lastDrinkTime}
-            onChange={(e) => onChange(e.target.value)}
-            className="rounded bg-surface-2 border border-border px-3 py-2 text-text"
-          />
+          <label className="text-sm text-muted block mb-1">Hora del ultimo trago</label>
+          <TimePicker value={lastDrinkTime} onChange={onChange} />
         </div>
         <button
           onClick={() => onChange(nowHHMM())}
