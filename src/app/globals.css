@@ -1,0 +1,135 @@
+@import "tailwindcss";
+
+/* ===== Tema claro (inspirado en Campus Virtual ORT) ===== */
+:root {
+  --page-bg: #e9eaec;
+  --surface: #ffffff;
+  --surface-2: #f3f5f8;
+  --border: #d7dce2;
+  --text: #17252f;
+  --muted: #5c6b78;
+  --brand: #1c5aa6;
+  --brand-strong: #164a86;
+  --brand-bar: #2f6fb0;
+  --on-brand: #ffffff;
+  --footer: #0d2a47;
+  --danger: #c0392b;
+  --warn: #d98a12;
+  --ok: #2e8b57;
+  --accent-liquid: #1c5aa6;
+}
+
+/* ===== Tema oscuro ===== */
+:root[data-theme="dark"] {
+  --page-bg: #0e1620;
+  --surface: #16212e;
+  --surface-2: #1d2b3a;
+  --border: #2a3b4d;
+  --text: #eaf1f8;
+  --muted: #9fb2c4;
+  --brand: #3f8ad6;
+  --brand-strong: #337bc2;
+  --brand-bar: #20374e;
+  --on-brand: #ffffff;
+  --footer: #0a1420;
+  --danger: #e06055;
+  --warn: #e0a231;
+  --ok: #3ab978;
+  --accent-liquid: #3f8ad6;
+}
+
+@theme inline {
+  --color-page: var(--page-bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-bar: var(--brand-bar);
+  --color-on-brand: var(--on-brand);
+  --color-footer: var(--footer);
+  --color-danger: var(--danger);
+  --color-warn: var(--warn);
+  --color-ok: var(--ok);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  background: var(--page-bg);
+}
+
+body {
+  background: var(--page-bg);
+  color: var(--text);
+  min-height: 100dvh;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted) 45%, transparent);
+  border-radius: 2px;
+}
+
+/* Barra de encabezado de sección estilo ORT */
+.section-bar {
+  background: var(--brand-bar);
+  color: var(--on-brand);
+}
+
+/* Sliders */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--muted) 40%, transparent);
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--brand);
+  cursor: pointer;
+  border: 2px solid var(--surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--brand);
+  cursor: pointer;
+  border: 2px solid var(--surface);
+}
+
+input[type="time"],
+input[type="number"],
+input[type="text"] {
+  color-scheme: light dark;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-in {
+  animation: fadeInUp 0.4s ease both;
+}
