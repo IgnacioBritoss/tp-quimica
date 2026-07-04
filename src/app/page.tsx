@@ -10,6 +10,7 @@ import { ResultsPanel } from "@/components/ResultsPanel";
 import { GlassPourBuilder } from "@/components/GlassPourBuilder";
 import { TipsAndMyths } from "@/components/TipsAndMyths";
 import { GameSection } from "@/components/GameSection";
+import { CalcExplainer } from "@/components/CalcExplainer";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SectionCard } from "@/components/SectionCard";
 import { Logo } from "@/components/Logo";
@@ -18,7 +19,7 @@ import { DrinkEntry, Profile } from "@/lib/types";
 import { getR } from "@/lib/bodyTypes";
 import { currentAlcoholemia, peakAlcoholemia, totalEthanolGrams } from "@/lib/calc";
 
-type Tab = "calculadora" | "consejos" | "juego";
+type Tab = "calculadora" | "consejos" | "calculo" | "juego";
 
 function nowHHMM() {
   const d = new Date();
@@ -98,7 +99,8 @@ export default function Home() {
             {([
               { id: "calculadora", label: "Calculadora" },
               { id: "consejos", label: "Consejos y mitos" },
-              { id: "juego", label: "Juego" },
+              { id: "calculo", label: "El calculo" },
+              { id: "juego", label: "Juegos" },
             ] as { id: Tab; label: string }[]).map((t) => (
               <button
                 key={t.id}
@@ -180,6 +182,24 @@ export default function Home() {
               <TipsAndMyths />
             </motion.div>
           )}
+          {tab === "calculo" && (
+            <motion.div
+              key="calc-explain"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="mb-6">
+                <h1 className="text-2xl sm:text-3xl font-bold text-text">El calculo</h1>
+                <p className="mt-2 text-muted max-w-2xl">
+                  Como estimamos la alcoholemia, con que formulas y con que logica. Y como se fue
+                  midiendo el alcohol a lo largo del tiempo.
+                </p>
+              </div>
+              <CalcExplainer />
+            </motion.div>
+          )}
           {tab === "juego" && (
             <motion.div
               key="game"
@@ -189,8 +209,10 @@ export default function Home() {
               transition={{ duration: 0.2 }}
             >
               <div className="mb-6">
-                <h1 className="text-2xl sm:text-3xl font-bold text-text">Juego</h1>
-                <p className="mt-2 text-muted max-w-2xl">Una seccion nueva que estamos preparando.</p>
+                <h1 className="text-2xl sm:text-3xl font-bold text-text">Juegos</h1>
+                <p className="mt-2 text-muted max-w-2xl">
+                  Aprende jugando: un quiz rapido sobre el alcohol y un juego para armar tragos.
+                </p>
               </div>
               <GameSection />
             </motion.div>
