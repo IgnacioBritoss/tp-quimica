@@ -1,13 +1,11 @@
 "use client";
 
-import { formatHours, hoursUntilLevel } from "@/lib/calc";
+import { formatHours, SimResult } from "@/lib/calc";
 import { BacCurveChart } from "@/components/BacCurveChart";
 import { SymptomsPanel } from "@/components/SymptomsPanel";
 
 interface ResultsPanelProps {
-  peak: number;
-  current: number;
-  hoursSinceLastDrink: number;
+  sim: SimResult;
   totalGrams: number;
   hasDrinks: boolean;
 }
@@ -21,15 +19,8 @@ function verdict(current: number) {
   };
 }
 
-export function ResultsPanel({
-  peak,
-  current,
-  hoursSinceLastDrink,
-  totalGrams,
-  hasDrinks,
-}: ResultsPanelProps) {
-  const v = verdict(current);
-  const toZero = hoursUntilLevel(peak, 0, hoursSinceLastDrink);
+export function ResultsPanel({ sim, totalGrams, hasDrinks }: ResultsPanelProps) {
+  const v = verdict(sim.current);
 
   return (
     <section className="bg-surface border border-border rounded-md overflow-hidden shadow-sm lg:sticky lg:top-4">
@@ -49,7 +40,7 @@ export function ResultsPanel({
           <>
             <div className="text-center py-2">
               <div className="text-6xl font-bold tabular-nums" style={{ color: v.color }}>
-                {current.toFixed(2)}
+                {sim.current.toFixed(2)}
                 <span className="text-2xl text-muted ml-1">g/L</span>
               </div>
               <div className="mt-2 text-sm font-medium" style={{ color: v.color }}>
@@ -57,7 +48,7 @@ export function ResultsPanel({
               </div>
             </div>
 
-            <BacCurveChart peak={peak} hoursSinceLastDrink={hoursSinceLastDrink} />
+            <BacCurveChart series={sim.series} nowX={sim.nowX} maxX={sim.maxX} />
 
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div className="rounded bg-surface-2 border border-border p-3">
@@ -66,7 +57,7 @@ export function ResultsPanel({
               </div>
               <div className="rounded bg-surface-2 border border-border p-3">
                 <div className="text-muted text-xs">Pico estimado</div>
-                <div className="text-text font-semibold">{peak.toFixed(2)} g/L</div>
+                <div className="text-text font-semibold">{sim.peak.toFixed(2)} g/L</div>
               </div>
             </div>
 
@@ -76,17 +67,17 @@ export function ResultsPanel({
                 <div className="text-xs text-muted">Necesitas llegar a 0,0 g/L</div>
               </div>
               <div className="text-sm font-semibold">
-                {toZero <= 0 ? (
+                {sim.timeToZero <= 0 ? (
                   <span className="text-ok">Ya podrias</span>
                 ) : (
-                  <span className="text-text">en {formatHours(toZero)}</span>
+                  <span className="text-text">en {formatHours(sim.timeToZero)}</span>
                 )}
               </div>
             </div>
 
             <div>
               <h3 className="text-sm font-semibold text-text mb-2">Posibles sintomas en este nivel</h3>
-              <SymptomsPanel bac={current} />
+              <SymptomsPanel bac={sim.current} />
             </div>
           </>
         )}

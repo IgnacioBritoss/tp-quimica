@@ -6,13 +6,15 @@ import { AnimatePresence, motion } from "framer-motion";
 interface TimePickerProps {
   value: string; // "HH:MM"
   onChange: (value: string) => void;
+  compact?: boolean;
+  align?: "left" | "right";
 }
 
 function pad(n: number) {
   return String(n).padStart(2, "0");
 }
 
-export function TimePicker({ value, onChange }: TimePickerProps) {
+export function TimePicker({ value, onChange, compact, align = "left" }: TimePickerProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -45,13 +47,25 @@ export function TimePicker({ value, onChange }: TimePickerProps) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-2 rounded border border-border bg-surface-2 px-3 py-2 text-text hover:border-brand/50 transition-colors min-w-[130px]"
+        className={
+          compact
+            ? "inline-flex items-center gap-1 rounded border border-border bg-surface-2 px-2 py-1 text-text hover:border-brand/50 transition-colors"
+            : "inline-flex items-center gap-2 rounded border border-border bg-surface-2 px-3 py-2 text-text hover:border-brand/50 transition-colors min-w-[130px]"
+        }
       >
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" className="text-brand">
+        <svg
+          viewBox="0 0 24 24"
+          width={compact ? 13 : 16}
+          height={compact ? 13 : 16}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="text-brand"
+        >
           <circle cx="12" cy="12" r="9" />
           <path d="M12 7v5l3 2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        <span className="tabular-nums text-lg font-semibold tracking-wide">
+        <span className={compact ? "tabular-nums text-sm font-medium" : "tabular-nums text-lg font-semibold tracking-wide"}>
           {value || "--:--"}
         </span>
       </button>
@@ -63,7 +77,9 @@ export function TimePicker({ value, onChange }: TimePickerProps) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ duration: 0.14 }}
-            className="absolute z-40 mt-2 left-0 rounded-md border border-border bg-surface shadow-xl overflow-hidden"
+            className={`absolute z-40 mt-2 rounded-md border border-border bg-surface shadow-xl overflow-hidden ${
+              align === "right" ? "right-0" : "left-0"
+            }`}
           >
             <div className="flex items-center justify-between px-3 py-2 section-bar">
               <span className="text-sm font-semibold">Elegi la hora</span>

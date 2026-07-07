@@ -93,3 +93,71 @@ export function formatHours(hours: number): string {
 export function formatGrams(g: number): string {
   return `${g.toFixed(1)} g`;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ *  Simulacion con varios tragos a distintas horas
+ * ─────────────────────────────────────────────────────────────────────────
+ *  El alcohol se elimina a ritmo casi constante (cinetica de orden cero):
+ *  ~0,15 g/L por hora mientras haya alcohol en sangre. Con varios tragos a
+ *  distintas horas, la alcoholemia sube en cada trago y baja en el medio.
+ */
+
+export interface Dose {
+  grams: number;
+  /** hace cuantas horas se tomo (0 = ahora, positivo = en el pasado) */
+  hoursAgo: number;
+}
+
+export interface SimResult {
+  current: number;
+  peak: number;
+  timeToZero: number; // horas desde ahora hasta 0,0 g/L
+  nowX: number; // posicion de "ahora" en el eje x (horas desde el primer trago)
+  maxX: number;
+  series: { x: number; bac: number }[];
+}
+
+export function simulateDoses(doses: Dose[], weightKg: number, r: number): SimResult {
+  const empty: SimResult = { current: 0, peak: 0, timeToZero: 0, nowX: 0, maxX: 3, series: [] };
+  const valid = doses.filter((d) => d.grams > 0);
+  if (!valid.length || weightKg <= 0 || r <= 0) return empty;
+
+  const rate = ELIMINATION_RATE;
+  const firstAgo = Math.max(...valid.map((d) => Math.max(0, d.hoursAgo)));
+  // Cada trago aporta un salto de alcoholemia dC en su momento.
+  const events = valid
+    .map((d) => ({ x: firstAgo - Math.max(0, d.hoursAgo), dC: d.grams / (weightKg * r) }))
+    .sort((a, b) => a.x - b.x);
+
+  const nowX = firstAgo;
+
+  // Alcoholemia en cualquier instante x (horas desde el primer trago).
+  const bacAt = (x: number): number => {
+    let bac = 0;
+    let t = 0;
+    for (const e of events) {
+      if (e.x > x) break;
+      bac = Math.max(0, bac - rate * (e.x - t));
+      t = e.x;
+      bac += e.dC;
+    }
+    return Math.max(0, bac - rate * (x - t));
+  };
+
+  const current = bacAt(nowX);
+  let peak = current;
+  for (const e of events) peak = Math.max(peak, bacAt(e.x));
+
+  // Como no hay tragos en el futuro, desde ahora solo baja: tiempo hasta 0.
+  const timeToZero = current / rate;
+  const maxX = nowX + timeToZero + 0.3;
+
+  const series: { x: number; bac: number }[] = [];
+  const N = 90;
+  for (let i = 0; i <= N; i++) {
+    const x = (maxX * i) / N;
+    series.push({ x, bac: bacAt(x) });
+  }
+
+  return { current, peak, timeToZero, nowX, maxX, series };
+}

@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ProfileSelector } from "@/components/ProfileSelector";
 import { DrinkCatalog } from "@/components/DrinkCatalog";
 import { DrinkList } from "@/components/DrinkList";
-import { TimeControl } from "@/components/TimeControl";
 import { ResultsPanel } from "@/components/ResultsPanel";
 import { GlassPourBuilder } from "@/components/GlassPourBuilder";
 import { TipsAndMyths } from "@/components/TipsAndMyths";
@@ -17,7 +16,7 @@ import { Logo } from "@/components/Logo";
 import { BrandWordmark } from "@/components/BrandWordmark";
 import { DrinkEntry, Profile } from "@/lib/types";
 import { getR } from "@/lib/bodyTypes";
-import { currentAlcoholemia, peakAlcoholemia, totalEthanolGrams } from "@/lib/calc";
+import { ethanolGramsForEntry, simulateDoses, totalEthanolGrams } from "@/lib/calc";
 
 type Tab = "calculadora" | "consejos" | "calculo" | "juego";
 
@@ -43,40 +42,41 @@ export default function Home() {
     weightKg: 70,
   });
   const [entries, setEntries] = useState<DrinkEntry[]>([]);
-  const [lastDrinkTime, setLastDrinkTime] = useState<string>("");
   const [now, setNow] = useState<Date | null>(null);
   const [builderOpen, setBuilderOpen] = useState(false);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 30_000);
-    const raf = requestAnimationFrame(() => {
-      setNow(new Date());
-      setLastDrinkTime(nowHHMM());
-    });
+    const raf = requestAnimationFrame(() => setNow(new Date()));
     return () => {
       clearInterval(id);
       cancelAnimationFrame(raf);
     };
   }, []);
 
-  const hoursSinceLastDrink = useMemo(
-    () => (now && lastDrinkTime ? hoursSince(lastDrinkTime, now) : 0),
-    [lastDrinkTime, now]
-  );
-
   const totalGrams = useMemo(() => totalEthanolGrams(entries), [entries]);
   const r = getR(profile.sex, profile.bodyType);
-  const peak = useMemo(() => peakAlcoholemia(totalGrams, profile.weightKg, r), [totalGrams, profile.weightKg, r]);
-  const current = useMemo(() => currentAlcoholemia(peak, hoursSinceLastDrink), [peak, hoursSinceLastDrink]);
+
+  const sim = useMemo(() => {
+    const clock = now ?? new Date();
+    const doses = entries.map((e) => ({
+      grams: ethanolGramsForEntry(e),
+      hoursAgo: e.time ? hoursSince(e.time, clock) : 0,
+    }));
+    return simulateDoses(doses, profile.weightKg, r);
+  }, [entries, now, profile.weightKg, r]);
 
   function addEntry(entry: DrinkEntry) {
-    setEntries((prev) => [...prev, entry]);
+    setEntries((prev) => [...prev, { ...entry, time: entry.time ?? nowHHMM() }]);
   }
   function removeEntry(id: string) {
     setEntries((prev) => prev.filter((e) => e.id !== id));
   }
   function updateQuantity(id: string, quantity: number) {
     setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, quantity } : e)));
+  }
+  function updateTime(id: string, time: string) {
+    setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, time } : e)));
   }
 
   return (
@@ -135,8 +135,9 @@ export default function Home() {
               <div className="mb-6">
                 <h1 className="text-2xl sm:text-3xl font-bold text-text">Cuanto tome esta noche</h1>
                 <p className="mt-2 text-muted max-w-2xl">
-                  Elegi tus tragos como los pediste en la barra, o arma el tuyo sirviendo a ojo, y
-                  estima tu alcoholemia sin tener que saber ningun numero exacto.
+                  Elegi tus tragos como los pediste en la barra, o arma el tuyo sirviendo a ojo.
+                  Ponele a cada uno la hora en que lo tomaste y estimamos como sube y baja tu
+                  alcoholemia durante la noche.
                 </p>
               </div>
 
@@ -144,23 +145,20 @@ export default function Home() {
                 <div className="space-y-6">
                   <ProfileSelector profile={profile} onChange={setProfile} />
                   <DrinkCatalog onAdd={addEntry} onOpenBuilder={() => setBuilderOpen(true)} />
-                  <SectionCard title="Tu lista de esta noche">
-                    <DrinkList entries={entries} onRemove={removeEntry} onQuantityChange={updateQuantity} />
+                  <SectionCard
+                    title="Tu lista de esta noche"
+                    subtitle="Cada trago arranca con la hora en que lo agregaste. Tocá la hora para ajustarla."
+                  >
+                    <DrinkList
+                      entries={entries}
+                      onRemove={removeEntry}
+                      onQuantityChange={updateQuantity}
+                      onTimeChange={updateTime}
+                    />
                   </SectionCard>
-                  <TimeControl
-                    lastDrinkTime={lastDrinkTime}
-                    onChange={setLastDrinkTime}
-                    hoursSinceLastDrink={hoursSinceLastDrink}
-                  />
                 </div>
 
-                <ResultsPanel
-                  peak={peak}
-                  current={current}
-                  hoursSinceLastDrink={hoursSinceLastDrink}
-                  totalGrams={totalGrams}
-                  hasDrinks={entries.length > 0}
-                />
+                <ResultsPanel sim={sim} totalGrams={totalGrams} hasDrinks={entries.length > 0} />
               </div>
             </motion.div>
           )}

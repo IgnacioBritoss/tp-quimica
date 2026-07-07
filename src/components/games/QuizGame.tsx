@@ -3,6 +3,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { QUIZ_QUESTIONS, QUIZ_COUNT, QuizQuestion } from "@/lib/quizData";
+import { addScore, getLeaderboard, ScoreEntry } from "@/lib/leaderboard";
+import { Leaderboard } from "@/components/games/Leaderboard";
+
+function fmtTime(ms: number): string {
+  const s = Math.round(ms / 1000);
+  if (s < 60) return `${s} s`;
+  const m = Math.floor(s / 60);
+  return `${m}:${String(s % 60).padStart(2, "0")}`;
+}
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -59,6 +68,10 @@ export function QuizGame({ onExit }: { onExit: () => void }) {
   const [revealed, setRevealed] = useState(false);
   const [timeLeft, setTimeLeft] = useState(TOTAL_MS);
   const [gained, setGained] = useState(0);
+  const [nickname, setNickname] = useState("");
+  const [totalTimeMs, setTotalTimeMs] = useState(0);
+  const [board, setBoard] = useState<ScoreEntry[]>(() => getLeaderboard());
+  const [lastDate, setLastDate] = useState<number | null>(null);
 
   const q = questions[index];
 
@@ -68,6 +81,7 @@ export function QuizGame({ onExit }: { onExit: () => void }) {
         if (already) return already;
         const isCorrect = choice === q.correct;
         setSelected(choice);
+        setTotalTimeMs((t) => t + (TOTAL_MS - timeLeft));
         if (isCorrect) {
           setScore((s) => {
             const pts = 100 + Math.round((timeLeft / TOTAL_MS) * 100) + streak * 20;
@@ -103,6 +117,7 @@ export function QuizGame({ onExit }: { onExit: () => void }) {
   }, [phase, revealed, reveal]);
 
   function start() {
+    if (!nickname.trim()) return;
     setDeck(buildDeck());
     setPhase("playing");
     setIndex(0);
@@ -112,11 +127,29 @@ export function QuizGame({ onExit }: { onExit: () => void }) {
     setSelected(null);
     setRevealed(false);
     setTimeLeft(TOTAL_MS);
+    setTotalTimeMs(0);
+    setLastDate(null);
+  }
+
+  function finish(finalScore: number, finalCorrect: number, finalTime: number) {
+    const date = Date.now();
+    const entry: ScoreEntry = {
+      name: nickname.trim().slice(0, 18),
+      score: finalScore,
+      correct: finalCorrect,
+      total: questions.length,
+      timeMs: finalTime,
+      date,
+    };
+    const real = addScore(entry);
+    setBoard(getLeaderboard(real));
+    setLastDate(date);
+    setPhase("finished");
   }
 
   function next() {
     if (index + 1 >= questions.length) {
-      setPhase("finished");
+      finish(score, correctCount, totalTimeMs);
       return;
     }
     setIndex((i) => i + 1);
@@ -136,23 +169,47 @@ export function QuizGame({ onExit }: { onExit: () => void }) {
   }, [correctCount, questions.length]);
 
   if (phase === "intro") {
+    const canStart = nickname.trim().length > 0;
     return (
-      <div className="text-center py-10 space-y-5">
-        <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="inline-block">
+      <div className="py-4 space-y-6 max-w-md mx-auto">
+        <div className="text-center">
           <div className="text-2xl font-bold text-text">Quiz del alcohol</div>
-          <p className="text-sm text-muted mt-2 max-w-sm mx-auto">
+          <p className="text-sm text-muted mt-2">
             {QUIZ_COUNT} preguntas al azar. Cuanto mas rapido respondes bien, mas puntos sumas.
             Encadena aciertos para el bonus de racha. Cada partida es distinta.
           </p>
-        </motion.div>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-text block mb-1">Tu nombre para el podio</label>
+          <input
+            type="text"
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && start()}
+            maxLength={18}
+            placeholder="Escribi tu nombre"
+            className="w-full rounded bg-surface-2 border border-border px-3 py-2 text-text placeholder:text-muted/50"
+          />
+        </div>
+
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <h3 className="text-sm font-semibold text-text">Podio</h3>
+            <span className="text-xs text-muted">(se guarda en tu navegador)</span>
+          </div>
+          <Leaderboard entries={board} />
+        </div>
+
         <div className="flex gap-2 justify-center">
           <button onClick={onExit} className="rounded px-4 py-2.5 border border-border text-muted hover:text-text hover:bg-surface-2">
             Volver
           </button>
           <motion.button
-            whileTap={{ scale: 0.96 }}
+            whileTap={{ scale: canStart ? 0.96 : 1 }}
             onClick={start}
-            className="rounded px-6 py-2.5 font-semibold text-on-brand bg-brand hover:bg-brand-strong"
+            disabled={!canStart}
+            className="rounded px-6 py-2.5 font-semibold text-on-brand bg-brand hover:bg-brand-strong disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Empezar
           </motion.button>
@@ -162,30 +219,51 @@ export function QuizGame({ onExit }: { onExit: () => void }) {
   }
 
   if (phase === "finished") {
+    const myRank = board.findIndex((e) => e.date === lastDate) + 1;
     return (
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center py-10 space-y-4">
-        <div className="text-sm uppercase tracking-wider text-muted">Resultado</div>
-        <motion.div
-          initial={{ scale: 0.6 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", stiffness: 260, damping: 14 }}
-          className="text-5xl font-bold text-brand tabular-nums"
-        >
-          {score}
+      <div className="py-4 space-y-6 max-w-md mx-auto">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-2">
+          <div className="text-sm uppercase tracking-wider text-muted">Resultado de {nickname.trim()}</div>
+          <motion.div
+            initial={{ scale: 0.6 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 260, damping: 14 }}
+            className="text-5xl font-bold text-brand tabular-nums"
+          >
+            {score}
+          </motion.div>
+          <div className="text-text font-medium">{resultMsg}</div>
+          {/* estadisticas */}
+          <div className="grid grid-cols-3 gap-2 pt-2">
+            <div className="rounded bg-surface-2 border border-border p-2">
+              <div className="text-[11px] text-muted">Correctas</div>
+              <div className="text-text font-semibold">{correctCount}/{questions.length}</div>
+            </div>
+            <div className="rounded bg-surface-2 border border-border p-2">
+              <div className="text-[11px] text-muted">Tiempo</div>
+              <div className="text-text font-semibold">{fmtTime(totalTimeMs)}</div>
+            </div>
+            <div className="rounded bg-surface-2 border border-border p-2">
+              <div className="text-[11px] text-muted">Puesto</div>
+              <div className="text-text font-semibold">{myRank > 0 ? `#${myRank}` : "-"}</div>
+            </div>
+          </div>
         </motion.div>
-        <div className="text-text font-medium">
-          {correctCount} de {questions.length} correctas
+
+        <div>
+          <h3 className="text-sm font-semibold text-text mb-2">Podio</h3>
+          <Leaderboard entries={board} highlightDate={lastDate ?? undefined} />
         </div>
-        <p className="text-sm text-muted max-w-sm mx-auto">{resultMsg}</p>
-        <div className="flex gap-2 justify-center pt-2">
+
+        <div className="flex gap-2 justify-center">
           <button onClick={onExit} className="rounded px-4 py-2.5 border border-border text-muted hover:text-text hover:bg-surface-2">
             Salir
           </button>
-          <button onClick={start} className="rounded px-6 py-2.5 font-semibold text-on-brand bg-brand hover:bg-brand-strong">
+          <button onClick={() => setPhase("intro")} className="rounded px-6 py-2.5 font-semibold text-on-brand bg-brand hover:bg-brand-strong">
             Jugar de nuevo
           </button>
         </div>
-      </motion.div>
+      </div>
     );
   }
 

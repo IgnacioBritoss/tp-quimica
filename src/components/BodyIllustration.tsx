@@ -34,9 +34,13 @@ export function BodyIllustration({ bodyType, sex, className, active }: BodyIllus
   const chestY = shoulderY + 12;
   const waistY = chestY + 14;
   const hipY = waistY + 12;
-  const legTopY = hipY + 2;
-  const legBottomY = 96;
-  const legInner = 3;
+  // Las piernas salen de abajo del torso (no del borde externo de la cadera),
+  // con una separacion natural en el centro y bajando casi rectas.
+  const legTopY = hipY - 1;
+  const legBottomY = 95;
+  const legW = Math.max(7, Math.min(10.5, p.hip * 0.7));
+  const legTopX = p.hip * 0.46;
+  const legBotX = p.hip * 0.34;
 
   // Contorno del torso (lado derecho de arriba a abajo, luego espejo)
   const torso = `
@@ -77,19 +81,19 @@ export function BodyIllustration({ bodyType, sex, className, active }: BodyIllus
         strokeWidth={5}
         strokeLinecap="round"
       />
-      {/* piernas */}
+      {/* piernas: casi rectas, centradas bajo el torso, con separacion */}
       <path
-        d={`M ${cx - p.hip + 2} ${legTopY} C ${cx - p.hip + 2} ${legTopY + 10}, ${cx - legInner - 3} ${legBottomY - 12}, ${cx - legInner - 2} ${legBottomY}`}
+        d={`M ${cx - legTopX} ${legTopY} L ${cx - legBotX} ${legBottomY}`}
         stroke={fill}
         strokeOpacity={active ? 0.9 : 0.55}
-        strokeWidth={7}
+        strokeWidth={legW}
         strokeLinecap="round"
       />
       <path
-        d={`M ${cx + p.hip - 2} ${legTopY} C ${cx + p.hip - 2} ${legTopY + 10}, ${cx + legInner + 3} ${legBottomY - 12}, ${cx + legInner + 2} ${legBottomY}`}
+        d={`M ${cx + legTopX} ${legTopY} L ${cx + legBotX} ${legBottomY}`}
         stroke={fill}
         strokeOpacity={active ? 0.9 : 0.55}
-        strokeWidth={7}
+        strokeWidth={legW}
         strokeLinecap="round"
       />
     </svg>
