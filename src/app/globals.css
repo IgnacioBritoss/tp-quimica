@@ -120,6 +120,25 @@ input[type="text"] {
   color-scheme: light dark;
 }
 
+/* Los controles no muestran cursor de texto ni se pueden seleccionar/titilar */
+button,
+label,
+.section-bar {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+label {
+  cursor: default;
+}
+/* Los campos de texto si permiten seleccionar y escribir */
+input,
+textarea {
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: auto;
+}
+
 @keyframes fadeInUp {
   from {
     opacity: 0;
