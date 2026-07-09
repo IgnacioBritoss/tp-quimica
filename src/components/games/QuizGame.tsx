@@ -3,15 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { QUIZ_QUESTIONS, QUIZ_COUNT, QuizQuestion } from "@/lib/quizData";
-import { addScore, getLeaderboard, ScoreEntry } from "@/lib/leaderboard";
-import { Leaderboard } from "@/components/games/Leaderboard";
-
-function fmtTime(ms: number): string {
-  const s = Math.round(ms / 1000);
-  if (s < 60) return `${s} s`;
-  const m = Math.floor(s / 60);
-  return `${m}:${String(s % 60).padStart(2, "0")}`;
-}
+import { addScore, buildBoard, loadRealScores, QUIZ_KEY, QUIZ_PINNED, ScoreEntry } from "@/lib/leaderboard";
+import { fmtTime, Leaderboard } from "@/components/games/Leaderboard";
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -70,7 +63,7 @@ export function QuizGame({ onExit }: { onExit: () => void }) {
   const [gained, setGained] = useState(0);
   const [nickname, setNickname] = useState("");
   const [totalTimeMs, setTotalTimeMs] = useState(0);
-  const [board, setBoard] = useState<ScoreEntry[]>(() => getLeaderboard());
+  const [board, setBoard] = useState<ScoreEntry[]>(() => buildBoard(QUIZ_PINNED, loadRealScores(QUIZ_KEY)));
   const [lastDate, setLastDate] = useState<number | null>(null);
 
   const q = questions[index];
@@ -136,13 +129,12 @@ export function QuizGame({ onExit }: { onExit: () => void }) {
     const entry: ScoreEntry = {
       name: nickname.trim().slice(0, 18),
       score: finalScore,
-      correct: finalCorrect,
-      total: questions.length,
       timeMs: finalTime,
+      meta: `${finalCorrect}/${questions.length} correctas`,
       date,
     };
-    const real = addScore(entry);
-    setBoard(getLeaderboard(real));
+    const real = addScore(QUIZ_KEY, entry);
+    setBoard(buildBoard(QUIZ_PINNED, real));
     setLastDate(date);
     setPhase("finished");
   }
@@ -233,7 +225,6 @@ export function QuizGame({ onExit }: { onExit: () => void }) {
             {score}
           </motion.div>
           <div className="text-text font-medium">{resultMsg}</div>
-          {/* estadisticas */}
           <div className="grid grid-cols-3 gap-2 pt-2">
             <div className="rounded bg-surface-2 border border-border p-2">
               <div className="text-[11px] text-muted">Correctas</div>

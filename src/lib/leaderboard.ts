@@ -1,31 +1,38 @@
 /**
- * Podio del quiz guardado en localStorage (momentaneo, sin base de datos).
- * Britos y Geonas quedan fijos en el 1er y 2do puesto con puntaje perfecto.
- * El resto de los jugadores se suman ordenados por mejor puntaje.
+ * Podios de los juegos guardados en localStorage (momentaneo, sin base de datos).
+ * Cada juego tiene su propia clave y sus jugadores fijos arriba con puntaje
+ * perfecto. El resto se suma ordenado por mejor puntaje (desempate por tiempo).
  */
 export interface ScoreEntry {
   name: string;
   score: number;
-  correct: number;
-  total: number;
   timeMs: number;
+  /** Texto libre para la segunda linea (ej: "4/10 correctas" o "5 tragos"). */
+  meta?: string;
   pinned?: boolean;
   date?: number;
 }
 
-const KEY = "alcohol_quiz_scores_v1";
 const MAX_STORED = 30;
 
-// Los dos que siempre encabezan el podio, con puntaje perfecto.
-export const PINNED: ScoreEntry[] = [
-  { name: "Britos", score: 2900, correct: 10, total: 10, timeMs: 41000, pinned: true },
-  { name: "Geonas", score: 2900, correct: 10, total: 10, timeMs: 44000, pinned: true },
+// ── Quiz ──────────────────────────────────────────────────────────────────
+export const QUIZ_KEY = "alcohol_quiz_scores_v1";
+export const QUIZ_PINNED: ScoreEntry[] = [
+  { name: "Britos", score: 2900, timeMs: 41000, meta: "10/10 correctas", pinned: true },
+  { name: "Geonas", score: 2900, timeMs: 44000, meta: "10/10 correctas", pinned: true },
 ];
 
-export function loadScores(): ScoreEntry[] {
+// ── Bartender ────────────────────────────────────────────────────────────
+export const BAR_KEY = "alcohol_bar_scores_v1";
+export const BAR_PINNED: ScoreEntry[] = [
+  { name: "Geonas", score: 500, timeMs: 60000, meta: "5 tragos perfectos", pinned: true },
+  { name: "Britos", score: 500, timeMs: 66000, meta: "5 tragos perfectos", pinned: true },
+];
+
+function load(key: string): ScoreEntry[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(key);
     if (!raw) return [];
     const arr = JSON.parse(raw) as ScoreEntry[];
     return Array.isArray(arr) ? arr.filter((e) => e && typeof e.score === "number") : [];
@@ -34,10 +41,10 @@ export function loadScores(): ScoreEntry[] {
   }
 }
 
-function saveScores(list: ScoreEntry[]) {
+function save(key: string, list: ScoreEntry[]) {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(KEY, JSON.stringify(list.slice(0, MAX_STORED)));
+    localStorage.setItem(key, JSON.stringify(list.slice(0, MAX_STORED)));
   } catch {}
 }
 
@@ -45,17 +52,20 @@ function sortScores(list: ScoreEntry[]): ScoreEntry[] {
   return [...list].sort((a, b) => b.score - a.score || a.timeMs - b.timeMs);
 }
 
-/** Agrega un puntaje y devuelve la lista de jugadores reales ya ordenada. */
-export function addScore(entry: ScoreEntry): ScoreEntry[] {
-  const list = loadScores();
+export function loadRealScores(key: string): ScoreEntry[] {
+  return sortScores(load(key));
+}
+
+/** Agrega un puntaje al juego indicado y devuelve la lista de jugadores reales. */
+export function addScore(key: string, entry: ScoreEntry): ScoreEntry[] {
+  const list = load(key);
   list.push({ ...entry, date: entry.date ?? Date.now() });
   const sorted = sortScores(list).slice(0, MAX_STORED);
-  saveScores(sorted);
+  save(key, sorted);
   return sorted;
 }
 
-/** Podio completo: los dos fijos arriba y despues los jugadores reales. */
-export function getLeaderboard(realPlayers?: ScoreEntry[]): ScoreEntry[] {
-  const real = sortScores(realPlayers ?? loadScores());
-  return [...PINNED, ...real];
+/** Podio completo: los fijos arriba y despues los jugadores reales. */
+export function buildBoard(pinned: ScoreEntry[], realPlayers: ScoreEntry[]): ScoreEntry[] {
+  return [...pinned, ...sortScores(realPlayers)];
 }

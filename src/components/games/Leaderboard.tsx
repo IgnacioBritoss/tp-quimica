@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { ScoreEntry } from "@/lib/leaderboard";
 
-function fmtTime(ms: number): string {
+export function fmtTime(ms: number): string {
   const s = Math.round(ms / 1000);
   if (s < 60) return `${s} s`;
   const m = Math.floor(s / 60);
@@ -66,7 +66,8 @@ export function Leaderboard({ entries, highlightDate, limit = 8 }: LeaderboardPr
                 {isYou && <span className="ml-1.5 text-[10px] uppercase tracking-wide text-brand">vos</span>}
               </div>
               <div className="text-[11px] text-muted">
-                {e.correct}/{e.total} correctas · {fmtTime(e.timeMs)}
+                {e.meta ? `${e.meta} · ` : ""}
+                {fmtTime(e.timeMs)}
               </div>
             </div>
             <div className="ml-auto text-right">
