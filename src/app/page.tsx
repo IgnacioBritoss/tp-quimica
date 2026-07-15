@@ -81,7 +81,8 @@ export default function Home() {
     const nowMs = (now ?? new Date()).getTime();
     const doses = entries.map((e) => ({
       grams: ethanolGramsForEntry(e),
-      hoursAgo: e.at ? Math.max(0, (nowMs - e.at) / 3_600_000) : 0,
+      // Positivo = pasado, negativo = futuro. Un trago futuro no afecta el "ahora".
+      hoursAgo: e.at ? (nowMs - e.at) / 3_600_000 : 0,
     }));
     return simulateDoses(doses, profile.weightKg, r);
   }, [entries, now, profile.weightKg, r]);

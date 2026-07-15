@@ -10,9 +10,14 @@ interface ResultsPanelProps {
   hasDrinks: boolean;
 }
 
-function verdict(current: number) {
+function verdict(current: number, hasFuture: boolean) {
   if (current <= 0.01)
-    return { color: "var(--ok)", text: "Alcohol cero: segun la estimacion ya podrias conducir." };
+    return {
+      color: "var(--ok)",
+      text: hasFuture
+        ? "Ahora estas en cero. Los tragos que cargaste a futuro todavia no cuentan."
+        : "Alcohol cero: segun la estimacion ya podrias conducir.",
+    };
   return {
     color: "var(--danger)",
     text: "Tenes alcohol en sangre. En Argentina el limite es 0,0: no manejes.",
@@ -20,7 +25,7 @@ function verdict(current: number) {
 }
 
 export function ResultsPanel({ sim, totalGrams, hasDrinks }: ResultsPanelProps) {
-  const v = verdict(sim.current);
+  const v = verdict(sim.current, sim.hasFuture);
 
   return (
     <section className="bg-surface border border-border rounded-md overflow-hidden shadow-sm lg:sticky lg:top-4">
@@ -49,6 +54,12 @@ export function ResultsPanel({ sim, totalGrams, hasDrinks }: ResultsPanelProps) 
             </div>
 
             <BacCurveChart series={sim.series} nowX={sim.nowX} maxX={sim.maxX} />
+            {sim.hasFuture && (
+              <p className="-mt-2 text-xs text-muted text-center">
+                La linea incluye los tragos que cargaste a futuro. La marca &quot;ahora&quot; es este
+                momento: lo que esta a su derecha todavia no paso.
+              </p>
+            )}
 
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div className="rounded bg-surface-2 border border-border p-3">

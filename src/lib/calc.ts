@@ -104,34 +104,45 @@ export function formatGrams(g: number): string {
 
 export interface Dose {
   grams: number;
-  /** hace cuantas horas se tomo (0 = ahora, positivo = en el pasado) */
+  /** hace cuantas horas se tomo. Positivo = en el pasado, negativo = en el futuro, 0 = ahora. */
   hoursAgo: number;
 }
 
 export interface SimResult {
   current: number;
   peak: number;
-  timeToZero: number; // horas desde ahora hasta 0,0 g/L
-  nowX: number; // posicion de "ahora" en el eje x (horas desde el primer trago)
+  timeToZero: number; // horas desde ahora hasta 0,0 g/L (contando tragos futuros)
+  nowX: number; // posicion de "ahora" en el eje x (horas desde el inicio del grafico)
   maxX: number;
   series: { x: number; bac: number }[];
+  hasFuture: boolean; // hay al menos un trago con fecha futura
 }
 
 export function simulateDoses(doses: Dose[], weightKg: number, r: number): SimResult {
-  const empty: SimResult = { current: 0, peak: 0, timeToZero: 0, nowX: 0, maxX: 3, series: [] };
+  const empty: SimResult = {
+    current: 0, peak: 0, timeToZero: 0, nowX: 0, maxX: 3, series: [], hasFuture: false,
+  };
   const valid = doses.filter((d) => d.grams > 0);
   if (!valid.length || weightKg <= 0 || r <= 0) return empty;
 
   const rate = ELIMINATION_RATE;
-  const firstAgo = Math.max(...valid.map((d) => Math.max(0, d.hoursAgo)));
-  // Cada trago aporta un salto de alcoholemia dC en su momento.
+  const hasFuture = valid.some((d) => d.hoursAgo < 0);
+
+  // El eje arranca en el punto mas temprano entre "el primer trago" y "ahora".
+  // hoursAgo grande = mas en el pasado. startAgo es el instante mas viejo a mostrar.
+  const maxAgo = Math.max(...valid.map((d) => d.hoursAgo));
+  const startAgo = Math.max(maxAgo, 0);
+
+  // x = horas desde el inicio del grafico (crece hacia el futuro).
+  // Un trago tomado hace h horas cae en x = startAgo - h.
   const events = valid
-    .map((d) => ({ x: firstAgo - Math.max(0, d.hoursAgo), dC: d.grams / (weightKg * r) }))
+    .map((d) => ({ x: startAgo - d.hoursAgo, dC: d.grams / (weightKg * r) }))
     .sort((a, b) => a.x - b.x);
 
-  const nowX = firstAgo;
+  const nowX = startAgo; // "ahora" corresponde a hoursAgo = 0
 
-  // Alcoholemia en cualquier instante x (horas desde el primer trago).
+  // Alcoholemia en cualquier instante x. Solo suma los tragos que ya ocurrieron
+  // hasta ese x, por eso un trago futuro (x > nowX) no afecta el valor en nowX.
   const bacAt = (x: number): number => {
     let bac = 0;
     let t = 0;
@@ -148,9 +159,12 @@ export function simulateDoses(doses: Dose[], weightKg: number, r: number): SimRe
   let peak = current;
   for (const e of events) peak = Math.max(peak, bacAt(e.x));
 
-  // Como no hay tragos en el futuro, desde ahora solo baja: tiempo hasta 0.
-  const timeToZero = current / rate;
-  const maxX = nowX + timeToZero + 0.3;
+  // Momento en que la alcoholemia llega a 0 para siempre (despues del ultimo trago).
+  const lastX = events[events.length - 1].x;
+  const zeroX = lastX + bacAt(lastX) / rate;
+  const timeToZero = Math.max(0, zeroX - nowX);
+
+  const maxX = Math.max(zeroX, nowX) + 0.3;
 
   const series: { x: number; bac: number }[] = [];
   const N = 90;
@@ -159,5 +173,5 @@ export function simulateDoses(doses: Dose[], weightKg: number, r: number): SimRe
     series.push({ x, bac: bacAt(x) });
   }
 
-  return { current, peak, timeToZero, nowX, maxX, series };
+  return { current, peak, timeToZero, nowX, maxX, series, hasFuture };
 }
