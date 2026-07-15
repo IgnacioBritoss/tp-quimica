@@ -3,17 +3,17 @@
 import { DrinkEntry } from "@/lib/types";
 import { DrinkImage } from "@/components/DrinkImage";
 import { ethanolGramsForEntry } from "@/lib/calc";
-import { TimePicker } from "@/components/TimePicker";
+import { DateTimePicker } from "@/components/DateTimePicker";
 import { AnimatePresence, motion } from "framer-motion";
 
 interface DrinkListProps {
   entries: DrinkEntry[];
   onRemove: (id: string) => void;
   onQuantityChange: (id: string, quantity: number) => void;
-  onTimeChange: (id: string, time: string) => void;
+  onAtChange: (id: string, at: number) => void;
 }
 
-export function DrinkList({ entries, onRemove, onQuantityChange, onTimeChange }: DrinkListProps) {
+export function DrinkList({ entries, onRemove, onQuantityChange, onAtChange }: DrinkListProps) {
   if (entries.length === 0) {
     return <p className="text-sm text-muted italic">Todavia no agregaste ningun trago.</p>;
   }
@@ -83,11 +83,11 @@ export function DrinkList({ entries, onRemove, onQuantityChange, onTimeChange }:
               </div>
 
               <div className="mt-2 flex items-center gap-2 pl-14">
-                <span className="text-xs text-muted">Lo tomaste a las</span>
-                <TimePicker
+                <span className="text-xs text-muted">Lo tomaste el</span>
+                <DateTimePicker
                   compact
-                  value={entry.time || ""}
-                  onChange={(t) => onTimeChange(entry.id, t)}
+                  value={entry.at ?? 0}
+                  onChange={(at) => onAtChange(entry.id, at)}
                 />
               </div>
             </motion.li>

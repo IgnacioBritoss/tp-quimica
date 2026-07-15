@@ -75,8 +75,8 @@ export interface DrinkEntry {
   quantity: number;
   color: string;
   image?: string;
-  /** Hora en que se tomo este trago, formato "HH:MM" */
-  time?: string;
+  /** Momento en que se tomo el trago (epoch en ms). Permite distintos dias. */
+  at?: number;
   /** Si esta seteado, se usa este valor de gramos de etanol por unidad (tragos armados) */
   ethanolGramsOverride?: number;
   /** Detalle de ingredientes para tragos armados (solo display) */

@@ -20,18 +20,38 @@ import { ethanolGramsForEntry, simulateDoses, totalEthanolGrams } from "@/lib/ca
 
 type Tab = "calculadora" | "consejos" | "calculo" | "juego";
 
-function nowHHMM() {
-  const d = new Date();
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
-function hoursSince(hhmm: string, now: Date) {
-  const [h, m] = hhmm.split(":").map(Number);
-  const then = new Date(now);
-  then.setHours(h, m, 0, 0);
-  let diffMs = now.getTime() - then.getTime();
-  if (diffMs < 0) diffMs += 24 * 60 * 60 * 1000;
-  return diffMs / (1000 * 60 * 60);
+function TabIcon({ id }: { id: Tab }) {
+  const p = { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  if (id === "calculadora")
+    return (
+      <svg {...p}>
+        <rect x="5" y="3" width="14" height="18" rx="2" />
+        <path d="M9 7h6M8 12h.01M12 12h.01M16 12v5M8 16h.01M12 16h.01" />
+      </svg>
+    );
+  if (id === "consejos")
+    return (
+      <svg {...p}>
+        <path d="M9 18h6M10 21h4" />
+        <path d="M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.3 1 2.5h6c0-1.2.3-1.8 1-2.5A6 6 0 0 0 12 3Z" />
+      </svg>
+    );
+  if (id === "calculo")
+    return (
+      <svg {...p}>
+        <path d="M4 19V5M4 19h16" />
+        <path d="M4 15c3 0 4-8 7-8s4 6 7 6" />
+      </svg>
+    );
+  // juego
+  return (
+    <svg {...p}>
+      <path d="M7 12h4M9 10v4" />
+      <circle cx="15.5" cy="11.5" r="0.6" fill="currentColor" />
+      <circle cx="17.5" cy="13.5" r="0.6" fill="currentColor" />
+      <path d="M17 6H7a5 5 0 0 0-5 5v1a4 4 0 0 0 7 3h6a4 4 0 0 0 7-3v-1a5 5 0 0 0-5-5Z" />
+    </svg>
+  );
 }
 
 export default function Home() {
@@ -58,16 +78,16 @@ export default function Home() {
   const r = getR(profile.sex, profile.bodyType);
 
   const sim = useMemo(() => {
-    const clock = now ?? new Date();
+    const nowMs = (now ?? new Date()).getTime();
     const doses = entries.map((e) => ({
       grams: ethanolGramsForEntry(e),
-      hoursAgo: e.time ? hoursSince(e.time, clock) : 0,
+      hoursAgo: e.at ? Math.max(0, (nowMs - e.at) / 3_600_000) : 0,
     }));
     return simulateDoses(doses, profile.weightKg, r);
   }, [entries, now, profile.weightKg, r]);
 
   function addEntry(entry: DrinkEntry) {
-    setEntries((prev) => [...prev, { ...entry, time: entry.time ?? nowHHMM() }]);
+    setEntries((prev) => [...prev, { ...entry, at: entry.at ?? Date.now() }]);
   }
   function removeEntry(id: string) {
     setEntries((prev) => prev.filter((e) => e.id !== id));
@@ -75,8 +95,8 @@ export default function Home() {
   function updateQuantity(id: string, quantity: number) {
     setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, quantity } : e)));
   }
-  function updateTime(id: string, time: string) {
-    setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, time } : e)));
+  function updateAt(id: string, at: number) {
+    setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, at } : e)));
   }
 
   return (
@@ -97,19 +117,21 @@ export default function Home() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <nav className="flex gap-1">
             {([
-              { id: "calculadora", label: "Calculadora" },
-              { id: "consejos", label: "Consejos y mitos" },
-              { id: "calculo", label: "El calculo" },
-              { id: "juego", label: "Juegos" },
-            ] as { id: Tab; label: string }[]).map((t) => (
+              { id: "calculadora", label: "Calculadora", short: "Calcular" },
+              { id: "consejos", label: "Consejos y mitos", short: "Consejos" },
+              { id: "calculo", label: "El calculo", short: "Metodo" },
+              { id: "juego", label: "Juegos", short: "Juegos" },
+            ] as { id: Tab; label: string; short: string }[]).map((t) => (
               <button
                 key={t.id}
                 onClick={() => setTab(t.id)}
-                className={`relative px-4 py-2.5 text-sm font-medium transition-colors ${
+                className={`relative flex-1 sm:flex-none flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-sm font-medium transition-colors ${
                   tab === t.id ? "text-brand" : "text-muted hover:text-text"
                 }`}
               >
-                {t.label}
+                <TabIcon id={t.id} />
+                <span className="sm:hidden">{t.short}</span>
+                <span className="hidden sm:inline">{t.label}</span>
                 {tab === t.id && (
                   <motion.span
                     layoutId="tab-underline"
@@ -153,7 +175,7 @@ export default function Home() {
                       entries={entries}
                       onRemove={removeEntry}
                       onQuantityChange={updateQuantity}
-                      onTimeChange={updateTime}
+                      onAtChange={updateAt}
                     />
                   </SectionCard>
                 </div>
