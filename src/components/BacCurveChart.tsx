@@ -39,8 +39,11 @@ function fmtMoment(ms: number, nowMs: number): string {
 
 export function BacCurveChart({ series, nowX, maxX, nowMs }: BacCurveChartProps) {
   const svgRef = useRef<SVGSVGElement>(null);
-  // Posicion del cursor que arrastra el usuario (horas desde el inicio). null = seguir "ahora".
+  // Posicion del punto (horas desde el inicio). null = mostrar "ahora".
   const [cursorX, setCursorX] = useState<number | null>(null);
+  // Modo mover: con el primer clic se activa y el punto sigue al mouse; con el
+  // segundo clic se fija. Asi no se mueve sin querer al pasar el mouse por arriba.
+  const [tracking, setTracking] = useState(false);
 
   const maxY = Math.max(0.6, ...series.map((p) => p.bac)) * 1.15;
   const spanX = Math.max(maxX, 1);
@@ -84,11 +87,22 @@ export function BacCurveChart({ series, nowX, maxX, nowMs }: BacCurveChartProps)
     return Math.min(Math.max(0, x), maxX);
   }
   function onMove(e: React.PointerEvent) {
+    if (!tracking) return; // sin activar, pasar el mouse no mueve nada
     setCursorX(pointerToX(e.clientX));
   }
   function onDown(e: React.PointerEvent) {
-    (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
     setCursorX(pointerToX(e.clientX));
+    if (e.pointerType === "mouse") {
+      // Mouse: primer clic activa (sigue al mouse), segundo clic fija.
+      setTracking((t) => !t);
+    } else {
+      // Dedo/lapiz: arrastrar mientras se mantiene, soltar fija.
+      (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+      setTracking(true);
+    }
+  }
+  function onUp(e: React.PointerEvent) {
+    if (e.pointerType !== "mouse") setTracking(false);
   }
 
   const axis = "color-mix(in srgb, var(--muted) 40%, transparent)";
@@ -114,20 +128,28 @@ export function BacCurveChart({ series, nowX, maxX, nowMs }: BacCurveChartProps)
         </span>
       </div>
 
+      <div className="mb-1 text-center text-xs" style={{ color: tracking ? "var(--brand)" : "var(--muted)" }}>
+        {tracking
+          ? "Hace clic de nuevo (o solta el dedo) para fijar el punto"
+          : "Hace clic o arrastra con el dedo para mover el punto"}
+      </div>
+
       <svg
         ref={svgRef}
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         className="w-full h-auto select-none"
-        style={{ touchAction: "none", cursor: "ew-resize" }}
+        style={{ touchAction: "none", cursor: tracking ? "crosshair" : "pointer" }}
         onPointerDown={onDown}
         onPointerMove={onMove}
+        onPointerUp={onUp}
+        onPointerCancel={onUp}
       >
         <line x1={PAD_LEFT} y1={PAD_TOP} x2={PAD_LEFT} y2={HEIGHT - PAD_BOTTOM} stroke={axis} />
         <line x1={PAD_LEFT} y1={HEIGHT - PAD_BOTTOM} x2={WIDTH - PAD_RIGHT} y2={HEIGHT - PAD_BOTTOM} stroke={axis} />
 
         <text x={4} y={PAD_TOP + 4} fontSize={10} fill="var(--muted)">g/L</text>
         <text x={WIDTH - PAD_RIGHT} y={HEIGHT - 8} fontSize={10} fill="var(--muted)" textAnchor="end">
-          arrastra para ver cada momento
+          {tracking ? "clic o solta para fijar" : "clic o arrastra para mover"}
         </text>
 
         {series.length > 1 && (
@@ -146,14 +168,29 @@ export function BacCurveChart({ series, nowX, maxX, nowMs }: BacCurveChartProps)
         <line x1={nowSvgX} y1={PAD_TOP} x2={nowSvgX} y2={HEIGHT - PAD_BOTTOM} stroke="var(--muted)" strokeDasharray="3 3" strokeOpacity={0.5} />
         <text x={nowSvgX + 3} y={PAD_TOP + 10} fontSize={9} fill="var(--muted)">ahora</text>
 
-        {/* cursor arrastrable */}
-        <line x1={cursorSvgX} y1={PAD_TOP} x2={cursorSvgX} y2={HEIGHT - PAD_BOTTOM} stroke="var(--brand)" strokeWidth={1.5} strokeOpacity={0.7} />
+        {/* punto movil */}
+        <line
+          x1={cursorSvgX}
+          y1={PAD_TOP}
+          x2={cursorSvgX}
+          y2={HEIGHT - PAD_BOTTOM}
+          stroke="var(--brand)"
+          strokeWidth={1.5}
+          strokeOpacity={0.7}
+          strokeDasharray={tracking ? undefined : "4 3"}
+        />
         <g>
           <rect x={boxX} y={boxY} width={boxW} height={boxH} rx={5} fill="var(--surface)" stroke="var(--brand)" strokeWidth={1} />
           <text x={boxX + boxW / 2} y={boxY + 13} fontSize={10} fill="var(--muted)" textAnchor="middle">{fmtMoment(cursorMs, nowMs)}</text>
           <text x={boxX + boxW / 2} y={boxY + 26} fontSize={12} fontWeight={700} fill="var(--brand)" textAnchor="middle">{cursorBac.toFixed(2)} g/L</text>
         </g>
-        <circle cx={cursorSvgX} cy={cursorSvgY} r={5.5} fill="var(--brand)" stroke="var(--surface)" strokeWidth={2} />
+        {tracking && (
+          <circle cx={cursorSvgX} cy={cursorSvgY} r={10} fill="var(--brand)" fillOpacity={0.18}>
+            <animate attributeName="r" values="7;12;7" dur="1.2s" repeatCount="indefinite" />
+            <animate attributeName="fill-opacity" values="0.28;0.06;0.28" dur="1.2s" repeatCount="indefinite" />
+          </circle>
+        )}
+        <circle cx={cursorSvgX} cy={cursorSvgY} r={tracking ? 6.5 : 5.5} fill="var(--brand)" stroke="var(--surface)" strokeWidth={2} />
       </svg>
     </div>
   );

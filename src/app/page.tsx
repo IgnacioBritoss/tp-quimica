@@ -80,16 +80,22 @@ export default function Home() {
   const nowMs = useMemo(() => (now ?? new Date()).getTime(), [now]);
 
   const sim = useMemo(() => {
-    const doses = entries.map((e) => ({
-      grams: ethanolGramsForEntry(e),
+    // Tolerancia: un trago hasta 2 min "en el futuro" se toma como ahora, para
+    // absorber el desfase entre el reloj y el estado (que se actualiza cada 30s).
+    const FUTURE_TOL_H = 2 / 60;
+    const doses = entries.map((e) => {
+      const rawAgo = e.at ? (nowMs - e.at) / 3_600_000 : 0;
       // Positivo = pasado, negativo = futuro. Un trago futuro no afecta el "ahora".
-      hoursAgo: e.at ? (nowMs - e.at) / 3_600_000 : 0,
-    }));
+      const hoursAgo = rawAgo < 0 && rawAgo > -FUTURE_TOL_H ? 0 : rawAgo;
+      return { grams: ethanolGramsForEntry(e), hoursAgo };
+    });
     return simulateDoses(doses, profile.weightKg, r);
   }, [entries, nowMs, profile.weightKg, r]);
 
   function addEntry(entry: DrinkEntry) {
-    setEntries((prev) => [...prev, { ...entry, at: entry.at ?? Date.now() }]);
+    const t = Date.now();
+    setEntries((prev) => [...prev, { ...entry, at: entry.at ?? t }]);
+    setNow(new Date(t)); // el reloj queda al dia para que el trago recien agregado cuente ya
   }
   function removeEntry(id: string) {
     setEntries((prev) => prev.filter((e) => e.id !== id));
