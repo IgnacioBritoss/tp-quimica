@@ -8,6 +8,7 @@ interface ResultsPanelProps {
   sim: SimResult;
   totalGrams: number;
   hasDrinks: boolean;
+  nowMs: number;
 }
 
 function verdict(current: number, hasFuture: boolean) {
@@ -24,7 +25,7 @@ function verdict(current: number, hasFuture: boolean) {
   };
 }
 
-export function ResultsPanel({ sim, totalGrams, hasDrinks }: ResultsPanelProps) {
+export function ResultsPanel({ sim, totalGrams, hasDrinks, nowMs }: ResultsPanelProps) {
   const v = verdict(sim.current, sim.hasFuture);
 
   return (
@@ -53,7 +54,7 @@ export function ResultsPanel({ sim, totalGrams, hasDrinks }: ResultsPanelProps) 
               </div>
             </div>
 
-            <BacCurveChart series={sim.series} nowX={sim.nowX} maxX={sim.maxX} />
+            <BacCurveChart series={sim.series} nowX={sim.nowX} maxX={sim.maxX} nowMs={nowMs} />
             {sim.hasFuture && (
               <p className="-mt-2 text-xs text-muted text-center">
                 La linea incluye los tragos que cargaste a futuro. La marca &quot;ahora&quot; es este

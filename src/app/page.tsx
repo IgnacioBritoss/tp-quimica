@@ -77,15 +77,16 @@ export default function Home() {
   const totalGrams = useMemo(() => totalEthanolGrams(entries), [entries]);
   const r = getR(profile.sex, profile.bodyType);
 
+  const nowMs = useMemo(() => (now ?? new Date()).getTime(), [now]);
+
   const sim = useMemo(() => {
-    const nowMs = (now ?? new Date()).getTime();
     const doses = entries.map((e) => ({
       grams: ethanolGramsForEntry(e),
       // Positivo = pasado, negativo = futuro. Un trago futuro no afecta el "ahora".
       hoursAgo: e.at ? (nowMs - e.at) / 3_600_000 : 0,
     }));
     return simulateDoses(doses, profile.weightKg, r);
-  }, [entries, now, profile.weightKg, r]);
+  }, [entries, nowMs, profile.weightKg, r]);
 
   function addEntry(entry: DrinkEntry) {
     setEntries((prev) => [...prev, { ...entry, at: entry.at ?? Date.now() }]);
@@ -181,7 +182,7 @@ export default function Home() {
                   </SectionCard>
                 </div>
 
-                <ResultsPanel sim={sim} totalGrams={totalGrams} hasDrinks={entries.length > 0} />
+                <ResultsPanel sim={sim} totalGrams={totalGrams} hasDrinks={entries.length > 0} nowMs={nowMs} />
               </div>
             </motion.div>
           )}
