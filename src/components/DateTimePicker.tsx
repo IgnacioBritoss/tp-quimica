@@ -160,9 +160,9 @@ export function DateTimePicker({ value, onChange, compact, align = "left" }: Dat
                       onClick={() => pickDay(day)}
                       className={`h-8 rounded text-sm tabular-nums transition-colors ${
                         isSel
-                          ? "bg-brand text-on-brand font-semibold"
+                          ? `bg-brand text-on-brand font-semibold ${isToday ? "ring-2 ring-brand/45 ring-offset-2 ring-offset-surface" : ""}`
                           : isToday
-                            ? "text-brand font-semibold hover:bg-surface-2"
+                            ? "text-brand font-bold ring-2 ring-brand/70 hover:bg-surface-2"
                             : "text-text hover:bg-surface-2"
                       }`}
                     >
@@ -170,6 +170,11 @@ export function DateTimePicker({ value, onChange, compact, align = "left" }: Dat
                     </button>
                   );
                 })}
+              </div>
+
+              <div className="mt-2 flex items-center gap-1.5">
+                <span className="inline-block w-3.5 h-3.5 rounded ring-2 ring-brand/70 shrink-0" />
+                <span className="text-[11px] text-muted">Hoy</span>
               </div>
 
               <div className="mt-3 flex items-center gap-2">
